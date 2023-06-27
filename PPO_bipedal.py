@@ -196,8 +196,8 @@ class PPO_bipedal_walker_train():
                 if self.save_model:
                     if (reward.mean().item()>best_reward and reward.mean().item() > self.thresh) | ((epoch*(len(dataloader))+iteration) % 1000 == 0):
                         best_reward = reward.mean().item()
-                        torch.save(mlp.state_dict(), self.PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2)))
-                        torch.save(self.mlp_optimizer.state_dict(), self.PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2))+'optim')
+                        torch.save(mlp.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2)))
+                        torch.save(self.mlp_optimizer.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2))+'optim')
                         print('saved at: '+str(round(reward.mean().item(),2)))
                 
                 # logging info
