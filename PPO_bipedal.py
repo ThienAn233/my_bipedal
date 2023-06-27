@@ -90,12 +90,12 @@ class PPO_bipedal_walker_train():
                 # nn setup
                     self.actor = nn.Sequential(
                         nn.Linear(observation_space,500),
-                        nn.LeakyReLU(0.2),
+                        nn.Tanh(),
                         nn.Linear(500,action_space*2),
                     )
                     self.critic = nn.Sequential(
                         nn.Linear(observation_space,500),
-                        nn.LeakyReLU(0.2),
+                        nn.Tanh(),
                         nn.Linear(500,1)
                     )
                 def forward(self,input):
