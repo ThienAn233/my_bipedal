@@ -109,7 +109,7 @@ class PPO_bipedal_walker_train():
         self.var, self.mean = torch.var_mean(dataset.local_return)
         print(f'return is normalized: mean {self.mean}, var {self.var}')
         # optim setup
-        self.mlp_optimizer = torch.optim.Adam(mlp.parameters(),lr = self.learning_rate)
+        self.mlp_optimizer = torch.optim.Adam(self.mlp.parameters(),lr = self.learning_rate)
         if load_model:
             self.mlp.load_state_dict(torch.load(self.model_path,map_location=self.device))
             self.mlp_optimizer.load_state_dict(torch.load(self.optim_path,map_location=device))
