@@ -32,7 +32,7 @@ class PPO_bipedal_walker_train():
                 # local variables
                     # Seed & devices
                 action_space = 6,
-                observation_space = 27,
+                observation_space = 51,
                 device = None):
         
         # Global variables
