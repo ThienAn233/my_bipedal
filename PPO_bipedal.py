@@ -105,7 +105,7 @@ class PPO_bipedal_walker_train():
         ### Normalize the return
         with torch.no_grad():
                 data = self.get_data_from_env()
-        dataset = self.custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
+        dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
         self.var, self.mean = torch.var_mean(dataset.local_return)
         print(f'return is normalized: mean {self.mean}, var {self.var}')
         # optim setup
