@@ -210,8 +210,8 @@ class PPO_bipedal_walker_train():
                     self.writer.add_scalar('Train/criticloss',critic_loss.detach().mean().item(),epoch*(len(dataloader))+iteration)
                     self.writer.add_scalar('Train/actorloss',actor_loss.detach().mean().item(),epoch*(len(dataloader))+iteration)
                 print(f'[{epoch}]:[{self.epochs}]|| iter [{epoch*(len(dataloader))+iteration}]: rew: {round(reward.mean().item(),2)} ret: {round(quality.mean().item(),2)} cri: {critic_loss.detach().mean().item()} act: {actor_loss.detach().mean().item()} entr: {entropy_loss.detach().item()}')
-        torch.save(mlp.state_dict(), self.PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
-        torch.save(self.mlp_optimizer.state_dict(), self.PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'optim')
+        torch.save(mlp.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
+        torch.save(self.mlp_optimizer.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'optim')
 
 
 class custom_dataset(Dataset):
