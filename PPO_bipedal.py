@@ -62,8 +62,8 @@ class PPO_bipedal_walker_train():
         
         
         if load_model:
-            self.model_path = PATH + '\\models\\PPO\\' + load_model
-            self.optim_path = PATH + '\\models\\PPO\\' + load_model + 'optim'
+            self.model_path = PATH + '//models//PPO//' + load_model
+            self.optim_path = PATH + '//models//PPO//' + load_model + 'optim'
         torch.manual_seed(self.seed)
         np.random.seed(self.seed)
         print(f'Using seed: {self.seed}')
@@ -74,7 +74,7 @@ class PPO_bipedal_walker_train():
         print('Using device: ', self.device)
         # Tensor board
         if self.log_data:
-            self.writer = SummaryWriter(PATH + '\\runs\\PPO\\'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
+            self.writer = SummaryWriter(PATH + '//runs//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
             # Envs setup
         self.env = bpd.SyncVectorEnv(bpd.bipedal_walker,num_of_env=self.number_of_envs,render_mode=self.render_mode)
         print(f'action space of {number_of_envs} envs is: {action_space}')
