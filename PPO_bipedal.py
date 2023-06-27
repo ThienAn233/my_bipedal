@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import gymnasium as gym 
 import time as t
 import my_bipedal.bipedal_walker_env as bpd
 from torch.distributions.normal import Normal
