@@ -207,7 +207,7 @@ class bipedal_walker():
         reach = np.exp(-0.25*obs[0]**2)
         
         # Reward for being high
-        high = np.exp(-2*(obs[4]-1)**2)
+        high = np.exp(-2*(obs[4]-0.4)**2)
         
         # Reward for good base orientation
         ori = np.exp(-(obs[7]-1)**2)
