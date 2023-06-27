@@ -27,8 +27,8 @@ class bipedal_walker():
         if robot_file:
             self.robot_file = robot_file
         else:
-            self.robot_file = 'bipedal_env\\bipedal.urdf'
-        self.target_file = 'bipedal_env\\target.urdf'
+            self.robot_file = 'my_bipedal//bipedal.urdf'
+        self.target_file = 'my_bipedal//target.urdf'
         self.target_radius = [0,2]
         self.target_height = [0.3,0.5]
         self.target = None
