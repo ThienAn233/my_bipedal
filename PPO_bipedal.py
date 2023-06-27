@@ -103,8 +103,10 @@ class PPO_bipedal_walker_train():
             self.mlp = MLP().to(device)
             
         ### Normalize the return
+        self.mlp.eval()
         with torch.no_grad():
                 data = self.get_data_from_env()
+        self.mlp.train()
         dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
         self.var, self.mean = torch.var_mean(dataset.local_return)
         print(f'return is normalized: mean {self.mean}, var {self.var}')
