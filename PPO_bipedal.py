@@ -8,73 +8,217 @@ from torch.distributions.normal import Normal
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-# Global variables
-PATH = 'C:\\Users\\Duc Thien An Nguyen\\Desktop\\my_collections\\Python\\bipedal_env\\models\\PPO\\'
-# model_path = 'C:\\Users\\Duc Thien An Nguyen\\Desktop\\my_collections\\Python\\bipedal_env\\models\\PPO\\2023-06-23-11-23-14_best_0.55'
-# optim_path = 'C:\\Users\\Duc Thien An Nguyen\\Desktop\\my_collections\\Python\\bipedal_env\\models\\PPO\\2023-06-23-11-23-14_best_0.55optim'
-log_data = True
-save_model = True
-render_mode = False
-thresh = 0.65
+class PPO_bipedal_walker_train():
+    def __init__(self,
+                # Global variables
+                PATH = None,
+                load_model = None,
+                log_data = True,
+                save_model = True,
+                render_mode = False,
+                thresh = 0.65,
 
-epsilon = 3e-2
-explore = 5e-2
-gamma = 0.99
-learning_rate = 4e-4
-number_of_envs = 5
-epochs = 500
-data_size = 4000
-batch_size = 2000
-reward_index = np.array([[0.9, 0.1, 0.]])
-seed = 3009
+                epsilon = 3e-2,
+                explore = 1e-2,
+                gamma = 0.99,
+                learning_rate = 4e-4,
+                number_of_envs = 5,
+                epochs = 500,
+                data_size = 4000,
+                batch_size = 2000,
+                reward_index = np.array([[0.9, 0.1, 0.]]),
+                seed = 3009,
+                mlp = None,
 
-# local variables
-    # Seed & devices
-action_space = 6
-observation_space = 27
-torch.manual_seed(seed)
-np.random.seed(seed)
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print('Using device: ', device)
-    # Tensor board
-if log_data:
-    writer = SummaryWriter('C:\\Users\\Duc Thien An Nguyen\\Desktop\\my_collections\\Python\\bipedal_env\\runs\\PPO\\'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
-    # Envs setup
-env = bpd.SyncVectorEnv(bpd.bipedal_walker,num_of_env=number_of_envs,render_mode=render_mode)
-print(f'action space of {number_of_envs} envs is: {action_space}')
-print(f'observation sapce of {number_of_envs} envs is: {observation_space}')
-class MLP(nn.Module):
-    def __init__(self):
-        super(MLP,self).__init__()
-    # nn setup
-        self.actor = nn.Sequential(
-            nn.Linear(observation_space,500),
-            nn.LeakyReLU(0.2),
-            nn.Linear(500,action_space*2),
-        )
-        self.critic = nn.Sequential(
-            nn.Linear(observation_space,500),
-            nn.LeakyReLU(0.2),
-            nn.Linear(500,1)
-        )
-    def forward(self,input):
-        return self.actor(input),self.critic(input)
+                # local variables
+                    # Seed & devices
+                action_space = 6,
+                observation_space = 27,
+                device = None):
+        
+        # Global variables
+        self.PATH = PATH
+        self.load_model = load_model
+        self.log_data = log_data
+        self.save_model = save_model
+        self.render_mode = render_mode
+        self.thresh = thresh
+        self.epsilon = epsilon
+        self.explore = explore
+        self.gamma = gamma
+        self.learning_rate = learning_rate
+        self.number_of_envs = number_of_envs
+        self.epochs = epochs
+        self.data_size = data_size
+        self.batch_size = batch_size
+        self.reward_index = reward_index
+        self.seed = seed
+        self.mlp = mlp
+        
+        # local variables
+            # Seed & devices
+        self.action_space = action_space,
+        self.observation_space = observation_space,
+        self.device = device
+        
+        
+        if load_model:
+            self.model_path = PATH + '\\models\\PPO\\' + load_model
+            self.optim_path = PATH + '\\models\\PPO\\' + load_model + 'optim'
+        torch.manual_seed(self.seed)
+        np.random.seed(self.seed)
+        print(f'Using seed: {self.seed}')
+        if self.device:
+            pass
+        else:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print('Using device: ', self.device)
+        # Tensor board
+        if self.log_data:
+            self.writer = SummaryWriter(PATH + '\\runs\\PPO\\'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
+            # Envs setup
+        self.env = bpd.SyncVectorEnv(bpd.bipedal_walker,num_of_env=self.number_of_envs,render_mode=self.render_mode)
+        print(f'action space of {number_of_envs} envs is: {action_space}')
+        print(f'observation sapce of {number_of_envs} envs is: {observation_space}')
+        
+        if self.mlp:
+            self.mlp.to(device)
+            pass
+        else:
+            class MLP(nn.Module):
+                def __init__(self):
+                    super(MLP,self).__init__()
+                # nn setup
+                    self.actor = nn.Sequential(
+                        nn.Linear(observation_space,500),
+                        nn.LeakyReLU(0.2),
+                        nn.Linear(500,action_space*2),
+                    )
+                    self.critic = nn.Sequential(
+                        nn.Linear(observation_space,500),
+                        nn.LeakyReLU(0.2),
+                        nn.Linear(500,1)
+                    )
+                def forward(self,input):
+                    return self.actor(input),self.critic(input)
+            self.mlp = MLP().to(device)
+            
+        ### Normalize the return
+        with torch.no_grad():
+                data = self.get_data_from_env()
+        dataset = self.custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
+        self.var, self.mean = torch.var_mean(dataset.local_return)
+        print(f'return is normalized: mean {self.mean}, var {self.var}')
+        # optim setup
+        self.mlp_optimizer = torch.optim.Adam(mlp.parameters(),lr = self.learning_rate)
+        if load_model:
+            self.mlp.load_state_dict(torch.load(self.model_path,map_location=self.device))
+            self.mlp_optimizer.load_state_dict(torch.load(self.optim_path,map_location=device))
+        else:
+            pass
+        self.mlp_optimizer.param_groups[0]['lr'] = self.learning_rate
+        print(self.mlp_optimizer.param_groups[0]['lr'])
 
+    #helper functions
+    def get_actor_critic_action_and_values(self,obs,eval=True):
+        logits, values = self.mlp(obs)
+        probs = Normal(loc = (torch.pi/4)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
+        if eval is True:
+            action = probs.sample()
+            return action, probs.log_prob(action)
+        else:
+            action = eval
+            return action, probs.log_prob(action), probs.entropy(), values
 
-#helper functions
-def get_actor_critic_action_and_values(obs,eval=True):
-    logits, values = mlp(obs)
-    probs = Normal(loc = (torch.pi/4)*nn.Tanh()(logits[:,:action_space]),scale=0.5*nn.Sigmoid()(logits[:,action_space:]))
-    if eval is True:
-        action = probs.sample()
-        return action, probs.log_prob(action)
-    else:
-        action = eval
-        return action, probs.log_prob(action), probs.entropy(), values
+    def get_data_from_env(self):
+        ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
+        local_observation = []
+        local_action = []
+        local_logprob = []
+        local_reward = []
+        local_timestep = []
+        
+        observation = self.env.get_obs()[0]
+        local_observation.append(torch.Tensor(observation))
+        timestep = np.ones((self.number_of_envs))
+        local_timestep.append(torch.Tensor(timestep.copy()))
+        for i in range(self.data_size) :
+            
+            # act and get observation 
+            action, logprob = self.get_actor_critic_action_and_values(torch.Tensor(observation).to(self.device))
+            action, logprob = action.cpu(), logprob.cpu()
+            local_action.append(torch.Tensor(action))
+            local_logprob.append(torch.Tensor(logprob))
+            self.env.step(action)
+            observation, reward, info= self.env.get_obs()
+            # print(np.sum(reward*reward_index,axis=-1))
+            reward = np.sum(reward*self.reward_index,axis=-1)
+            terminated,truncated = False, info[0]
+
+            # save var
+            local_reward.append(torch.Tensor(reward))
+            local_observation.append(torch.Tensor(observation))
+            local_timestep.append(torch.Tensor(timestep.copy()))
+            
+            timestep = (1 + timestep)*(1-(terminated | truncated))
+        return local_observation, local_action, local_logprob, local_reward, local_timestep
+
+    def train(self):
+        best_reward = 0
+        for epoch in range(self.epochs):
+            mlp = self.mlp.eval()
+            # Sample data from the environment
+            with torch.no_grad():
+                data = self.get_data_from_env()
+            dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
+            dataloader = DataLoader(dataset,batch_size=self.batch_size,shuffle=True)
+            for iteration, data in enumerate(dataloader):
+                mlp = mlp.train()
+                
+                obs, action, logprob, quality, reward = data
+                quality = (quality - self.mean)/self.var**0.5
+                obs, action, logprob, quality, reward = obs.to(self.device), action.to(self.device), logprob.to(self.device), quality.to(self.device), reward.to(self.device)
+                next_action, next_logprob, entropy, value = self.get_actor_critic_action_and_values(obs,eval=action)
+                # print(reward-quality)
+                # Train models
+                self.mlp_optimizer.zero_grad()
+                prob_ratio = torch.exp(next_logprob-logprob)
+                # print('qua',quality)
+                # print('val',value)
+                advantage = quality-value
+                critic_loss = (advantage**2).mean()
+                entropy_loss = entropy.mean()
+                actor_loss = - torch.min( prob_ratio*advantage , torch.clamp(prob_ratio, 1-self.epsilon, 1+self.epsilon)*advantage ).mean() - self.explore*entropy_loss
+                loss = critic_loss + actor_loss
+                loss.backward()
+                self.mlp_optimizer.step()
+                
+                #save model
+                if self.save_model:
+                    if (reward.mean().item()>best_reward and reward.mean().item() > self.thresh) | ((epoch*(len(dataloader))+iteration) % 1000 == 0):
+                        best_reward = reward.mean().item()
+                        torch.save(mlp.state_dict(), self.PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2)))
+                        torch.save(self.mlp_optimizer.state_dict(), self.PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2))+'optim')
+                        print('saved at: '+str(round(reward.mean().item(),2)))
+                
+                # logging info
+                if self.log_data:
+                    self.writer.add_scalar('Eval/minibatchreward',reward.mean().item(),epoch*(len(dataloader))+iteration)
+                    self.writer.add_scalar('Eval/minibatchreturn',quality.mean().item(),epoch*(len(dataloader))+iteration)
+                    self.writer.add_scalar('Train/entropyloss',entropy_loss.item(),epoch*(len(dataloader))+iteration)
+                    self.writer.add_scalar('Train/criticloss',critic_loss.detach().mean().item(),epoch*(len(dataloader))+iteration)
+                    self.writer.add_scalar('Train/actorloss',actor_loss.detach().mean().item(),epoch*(len(dataloader))+iteration)
+                print(f'[{epoch}]:[{self.epochs}]|| iter [{epoch*(len(dataloader))+iteration}]: rew: {round(reward.mean().item(),2)} ret: {round(quality.mean().item(),2)} cri: {critic_loss.detach().mean().item()} act: {actor_loss.detach().mean().item()} entr: {entropy_loss.detach().item()}')
+        torch.save(mlp.state_dict(), self.PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
+        torch.save(self.mlp_optimizer.state_dict(), self.PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'optim')
+
 
 class custom_dataset(Dataset):
     
-    def __init__(self,data):
+    def __init__(self,data,data_size,number_of_envs,gamma):
+        self.data_size = data_size
+        self.number_of_envs = number_of_envs
+        self.gamma = gamma
         self.obs, self.action, self.logprob, self.reward, self.timestep = data
         self.local_return = [0 for i in range(data_size)]
         self.local_return = torch.hstack(self.get_G()).view(-1,1)
@@ -84,7 +228,7 @@ class custom_dataset(Dataset):
         self.local_reward = torch.hstack(self.reward).view(-1,1)
 
     def __len__(self):
-        return data_size*number_of_envs
+        return self.data_size*self.number_of_envs
     
     def __getitem__(self, index):
         return self.local_observation[index], self.local_action[index], self.local_logprob[index], self.local_return[index], self.local_reward[index]
@@ -95,107 +239,9 @@ class custom_dataset(Dataset):
     
     def get_G(self):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
-        for  i in range(data_size-1,-1,-1):
-            if i == data_size-1:
+        for  i in range(self.data_size-1,-1,-1):
+            if i == self.data_size-1:
                 self.local_return[i] = self.reward[i]
             else:
-                self.local_return[i] = self.reward[i] + self.isnt_end(i)*gamma*self.local_return[i+1]
+                self.local_return[i] = self.reward[i] + self.isnt_end(i)*self.gamma*self.local_return[i+1]
         return self.local_return
-
-
-def get_data_from_env():
-    ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
-    local_observation = []
-    local_action = []
-    local_logprob = []
-    local_reward = []
-    local_timestep = []
-    
-    observation = env.get_obs()[0]
-    local_observation.append(torch.Tensor(observation))
-    timestep = np.ones((number_of_envs))
-    local_timestep.append(torch.Tensor(timestep.copy()))
-    for i in range(data_size) :
-        
-        # act and get observation 
-        action, logprob = get_actor_critic_action_and_values(torch.Tensor(observation).to(device))
-        action, logprob = action.cpu(), logprob.cpu()
-        local_action.append(torch.Tensor(action))
-        local_logprob.append(torch.Tensor(logprob))
-        env.step(action)
-        observation, reward, info= env.get_obs()
-        # print(np.sum(reward*reward_index,axis=-1))
-        reward = np.sum(reward*reward_index,axis=-1)
-        terminated,truncated = False, info[0]
-
-        # save var
-        local_reward.append(torch.Tensor(reward))
-        local_observation.append(torch.Tensor(observation))
-        local_timestep.append(torch.Tensor(timestep.copy()))
-        
-        timestep = (1 + timestep)*(1-(terminated | truncated))
-    return local_observation, local_action, local_logprob, local_reward, local_timestep
-
-### Normalize the return
-mlp = MLP().to(device)
-with torch.no_grad():
-        data = get_data_from_env()
-dataset = custom_dataset(data)
-dataloader = DataLoader(dataset,batch_size=batch_size,shuffle=True)
-var, mean = torch.var_mean(dataset.local_return)
-    # optim setup
-mlp_optimizer = torch.optim.Adam(mlp.parameters(),lr = learning_rate)
-# mlp.load_state_dict(torch.load(model_path,map_location=device))
-# mlp_optimizer.load_state_dict(torch.load(optim_path,map_location=device))
-mlp_optimizer.param_groups[0]['lr'] = learning_rate
-print(mlp_optimizer.param_groups[0]['lr'])
-
-
-
-best_reward = 0
-for epoch in range(epochs):
-    mlp = mlp.eval()
-    # Sample data from the environment
-    with torch.no_grad():
-        data = get_data_from_env()
-    dataset = custom_dataset(data)
-    dataloader = DataLoader(dataset,batch_size=batch_size,shuffle=True)
-    for iteration, data in enumerate(dataloader):
-        mlp = mlp.train()
-        
-        obs, action, logprob, quality, reward = data
-        quality = (quality - mean)/var**0.5
-        obs, action, logprob, quality, reward = obs.to(device), action.to(device), logprob.to(device), quality.to(device), reward.to(device)
-        next_action, next_logprob, entropy, value = get_actor_critic_action_and_values(obs,eval=action)
-        # print(reward-quality)
-        # Train models
-        mlp_optimizer.zero_grad()
-        prob_ratio = torch.exp(next_logprob-logprob)
-        # print('qua',quality)
-        # print('val',value)
-        advantage = quality-value
-        critic_loss = (advantage**2).mean()
-        entropy_loss = entropy.mean()
-        actor_loss = - torch.min( prob_ratio*advantage , torch.clamp(prob_ratio, 1-epsilon, 1+epsilon)*advantage ).mean() - explore*entropy_loss
-        loss = critic_loss + actor_loss
-        loss.backward()
-        mlp_optimizer.step()
-        
-        #save model
-        if save_model:
-            if (reward.mean().item()>best_reward and reward.mean().item() > thresh) | ((epoch*(len(dataloader))+iteration) % 1000 == 0):
-                best_reward = reward.mean().item()
-                torch.save(mlp.state_dict(), PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2)))
-                torch.save(mlp_optimizer.state_dict(), PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2))+'optim')
-                print('saved at: '+str(round(reward.mean().item(),2)))
-        
-        # logging info
-        if log_data:
-            writer.add_scalar('Eval/minibatchreward',reward.mean().item(),epoch*(len(dataloader))+iteration)
-            writer.add_scalar('Eval/minibatchreturn',quality.mean().item(),epoch*(len(dataloader))+iteration)
-            writer.add_scalar('Train/entropyloss',entropy_loss.item(),epoch*(len(dataloader))+iteration)
-            writer.add_scalar('Train/criticloss',critic_loss.detach().mean().item(),epoch*(len(dataloader))+iteration)
-            writer.add_scalar('Train/actorloss',actor_loss.detach().mean().item(),epoch*(len(dataloader))+iteration)
-        print(f'[{epoch}]:[{epochs}]|| iter [{epoch*(len(dataloader))+iteration}]: rew: {round(reward.mean().item(),2)} ret: {round(quality.mean().item(),2)} cri: {critic_loss.detach().mean().item()} act: {actor_loss.detach().mean().item()} entr: {entropy_loss.detach().item()}')
-torch.save(mlp.state_dict(), PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
-torch.save(mlp_optimizer.state_dict(), PATH+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'optim')
