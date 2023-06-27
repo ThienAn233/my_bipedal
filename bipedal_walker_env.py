@@ -27,8 +27,8 @@ class bipedal_walker():
         if robot_file:
             self.robot_file = robot_file
         else:
-            self.robot_file = 'my_bipedal//bipedal.urdf'
-        self.target_file = 'my_bipedal//target.urdf'
+            self.robot_file = 'bipedal_env\\bipedal.urdf'
+        self.target_file = 'bipedal_env\\target.urdf'
         self.target_radius = [0,2]
         self.target_height = [0.3,0.5]
         self.target = None
@@ -138,7 +138,7 @@ class bipedal_walker():
         base_position, base_orientation =  p.getBasePositionAndOrientation(self.robotId, physicsClientId = self.physicsClient)
         temp_obs_value += [np.sum((self.target - base_position)**2)**.5, *(self.target - base_position)]
         
-        # Get base height and base orientation
+        # Get base height and base orientation in quaternion
         temp_obs_value += [base_position[-1],*base_orientation]
         
         # Get base linear and angular velocity
@@ -156,6 +156,14 @@ class bipedal_walker():
             
         return temp_obs_value
     
+    def get_links_values(self):
+        temp_obs_vaule = []
+
+        #get links orientation of links in quaternion
+        for Id in self.jointId_list:
+            temp_obs_vaule += [*p.getLinkState(self.robotId,Id,physicsClientId = self.physicsClient)[1]]
+        return temp_obs_vaule
+    
     def get_all_obs(self):
         temp_obs_value = []
         
@@ -163,10 +171,13 @@ class bipedal_walker():
         base_info = self.get_distance_and_ori_and_velocity_from_target()
         
         # Joints state
-        joints_info =self.get_joints_values()
+        joints_info = self.get_joints_values()
         
-         # Full observation
-        temp_obs_value = [*base_info,*joints_info]
+        # Links state
+        links_info = self.get_links_values()
+        
+        # Full observation
+        temp_obs_value = [*base_info,*joints_info,*links_info]
         
         return temp_obs_value
         
@@ -240,7 +251,7 @@ class SyncVectorEnv():
 # for _ in range(100):
 #     # env.step()
 #     obs,rew,_ = env.get_obs()
-#     print(rew)
+#     print(len(obs))
 #     t.sleep(1./240.)
 # env.close()
 # env = SyncVectorEnv(bipedal_walker)
