@@ -25,7 +25,7 @@ class PPO_bipedal_walker_train():
                 epochs = 500,
                 data_size = 4000,
                 batch_size = 2000,
-                reward_index = np.array([[0.9, 0.1, 0.]]),
+                reward_index = np.array([[0.8, 0.1, 0.1]]),
                 seed = 3009,
                 mlp = None,
 
