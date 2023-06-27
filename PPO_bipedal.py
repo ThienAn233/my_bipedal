@@ -81,7 +81,7 @@ class PPO_bipedal_walker_train():
         print(f'observation sapce of {number_of_envs} envs is: {observation_space}')
         
         if self.mlp:
-            self.mlp.to(device)
+            self.mlp.to(self.device)
             pass
         else:
             class MLP(nn.Module):
@@ -100,7 +100,7 @@ class PPO_bipedal_walker_train():
                     )
                 def forward(self,input):
                     return self.actor(input),self.critic(input)
-            self.mlp = MLP().to(device)
+            self.mlp = MLP().to(self.device)
             
         ### Normalize the return
         self.mlp.eval()
