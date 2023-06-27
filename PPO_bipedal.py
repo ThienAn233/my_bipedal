@@ -17,7 +17,7 @@ class PPO_bipedal_walker_train():
                 render_mode = False,
                 thresh = 0.65,
 
-                epsilon = 3e-2,
+                epsilon = 0.2,
                 explore = 1e-2,
                 gamma = 0.99,
                 learning_rate = 4e-4,
