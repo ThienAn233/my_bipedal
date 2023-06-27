@@ -236,13 +236,13 @@ class SyncVectorEnv():
             env.close()
         
 # TEST ###
-env = bipedal_walker(render_mode='human')
-for _ in range(100):
-    # env.step()
-    obs,rew,_ = env.get_obs()
-    print(rew)
-    t.sleep(1./240.)
-env.close()
+# env = bipedal_walker(render_mode='human')
+# for _ in range(100):
+#     # env.step()
+#     obs,rew,_ = env.get_obs()
+#     print(rew)
+#     t.sleep(1./240.)
+# env.close()
 # env = SyncVectorEnv(bipedal_walker)
 # for _ in range(1500):
 #     # env.step()
