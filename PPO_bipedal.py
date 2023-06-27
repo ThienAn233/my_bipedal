@@ -56,8 +56,8 @@ class PPO_bipedal_walker_train():
         
         # local variables
             # Seed & devices
-        self.action_space = action_space,
-        self.observation_space = observation_space,
+        self.action_space = action_space
+        self.observation_space = observation_space
         self.device = device
         
         
