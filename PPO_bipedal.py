@@ -15,17 +15,17 @@ class PPO_bipedal_walker_train():
                 log_data = True,
                 save_model = True,
                 render_mode = False,
-                thresh = 0.65,
+                thresh = 0.3,
 
                 epsilon = 0.2,
-                explore = 1e-2,
+                explore = 1e-4,
                 gamma = 0.99,
                 learning_rate = 4e-4,
-                number_of_envs = 5,
+                number_of_envs = 10,
                 epochs = 500,
                 data_size = 4000,
                 batch_size = 2000,
-                reward_index = np.array([[0.8, 0.1, 0.1]]),
+                reward_index = np.array([[0., 0.8, 0.2]]),
                 seed = 3009,
                 mlp = None,
 
@@ -196,11 +196,11 @@ class PPO_bipedal_walker_train():
                 
                 #save model
                 if self.save_model:
-                    if (reward.mean().item()>best_reward and reward.mean().item() > self.thresh) | ((epoch*(len(dataloader))+iteration) % 1000 == 0):
-                        best_reward = reward.mean().item()
-                        torch.save(mlp.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2)))
-                        torch.save(self.mlp_optimizer.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(reward.mean().item(),2))+'optim')
-                        print('saved at: '+str(round(reward.mean().item(),2)))
+                    if (quality.mean().item()>best_reward and quality.mean().item() > self.thresh) | ((epoch*(len(dataloader))+iteration) % 1000 == 0):
+                        best_reward = quality.mean().item()
+                        torch.save(mlp.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(quality.mean().item(),2)))
+                        torch.save(self.mlp_optimizer.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'_best_'+str(round(quality.mean().item(),2))+'optim')
+                        print('saved at: '+str(round(quality.mean().item(),2)))
                 
                 # logging info
                 if self.log_data:
