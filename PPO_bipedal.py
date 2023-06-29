@@ -244,18 +244,16 @@ class custom_dataset(Dataset):
         self.number_of_envs = number_of_envs
         self.gamma = gamma
         self.obs, self.action, self.logprob, self.reward, self.timestep = data
-
+        
         # normalize data
-        (obs_var, obs_mean), (rew_var, rew_mean) = normalizer
-        self.obs = (self.obs-obs_mean)/obs_var**.5
-        self.reward = (self.reward-rew_mean)/rew_var**.5
+        (self.obs_var, self.obs_mean), (self.rew_var, self.rew_mean) = normalizer 
         
         self.local_return = [0 for i in range(data_size)]
         self.local_return = torch.hstack(self.get_G()).view(-1,1)
-        self.local_observation = torch.vstack(self.obs)
+        self.local_observation = (torch.vstack(self.obs)-self.obs_mean)/self.obs_var**.5
         self.local_action = torch.vstack(self.action)
         self.local_logprob = torch.vstack(self.logprob)
-        self.local_reward = torch.hstack(self.reward).view(-1,1)
+        self.local_reward = (torch.hstack(self.reward).view(-1,1)-self.rew_mean)/self.rew_var**.5
 
     def __len__(self):
         return self.data_size*self.number_of_envs
@@ -271,7 +269,7 @@ class custom_dataset(Dataset):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
         for  i in range(self.data_size-1,-1,-1):
             if i == self.data_size-1:
-                self.local_return[i] = self.reward[i]
+                self.local_return[i] = (self.reward[i]-self.rew_mean)/self.rew_var**.5
             else:
-                self.local_return[i] = self.reward[i] + self.isnt_end(i)*self.gamma*self.local_return[i+1]
+                self.local_return[i] = (self.reward[i]-self.rew_mean)/self.rew_var**.5 + self.isnt_end(i)*self.gamma*self.local_return[i+1]
         return self.local_return
