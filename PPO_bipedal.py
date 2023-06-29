@@ -118,6 +118,7 @@ class PPO_bipedal_walker_train():
         self.mlp.eval()
         with torch.no_grad():
                 data = self.get_data_from_env()
+        data = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
         self.data_normalize(data)
 
                     
@@ -136,12 +137,11 @@ class PPO_bipedal_walker_train():
     
     #helper functions
     def data_normalize(self,data):
-        obs, _, _, reward, _ = data
-        obs = torch.vstack(obs)
-        reward = torch.vstack(reward).view(-1,1)
+        obs = data.local_observation
+        qua = data.local_return
         self.obs_var_mean = torch.var_mean(obs,dim=0)
-        self.reward_var_mean = torch.var_mean(reward,dim=0)
-        print('observation and rewards are normalized')
+        self.qua_var_mean = torch.var_mean(qua,dim = 0)
+        print('observation and return are normalized')
         return
     
     def get_actor_critic_action_and_values(self,obs,eval=True):
@@ -194,13 +194,18 @@ class PPO_bipedal_walker_train():
             # Sample data from the environment
             with torch.no_grad():
                 data = self.get_data_from_env()
-            dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma,(self.obs_var_mean,self.reward_var_mean))
+            dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
             dataloader = DataLoader(dataset,batch_size=self.batch_size,shuffle=True)
             for iteration, data in enumerate(dataloader):
                 mlp = mlp.train()
                 
                 obs, action, logprob, quality, reward = data
                 obs, action, logprob, quality, reward = obs.to(self.device), action.to(self.device), logprob.to(self.device), quality.to(self.device), reward.to(self.device)
+
+                # Normalize obs and return
+                obs = (obs-self.obs_var_mean[1])/self.obs_var_mean[0]**.5
+                quality = (quality-self.qua_var_mean[1])/self.qua_var_mean[0]**.5
+                
                 next_action, next_logprob, entropy, value = self.get_actor_critic_action_and_values(obs,eval=action)
                 # print(reward-quality)
                 # Train models
@@ -238,21 +243,17 @@ class PPO_bipedal_walker_train():
 
 class custom_dataset(Dataset):
     
-    def __init__(self,data,data_size,number_of_envs,gamma,normalizer):
+    def __init__(self,data,data_size,number_of_envs,gamma):
         self.data_size = data_size
         self.number_of_envs = number_of_envs
         self.gamma = gamma
-        self.obs, self.action, self.logprob, self.reward, self.timestep = data
-        
-        # normalize data
-        (self.obs_var, self.obs_mean), (self.rew_var, self.rew_mean) = normalizer 
-        
+        self.obs, self.action, self.logprob, self.reward, self.timestep = data        
         self.local_return = [0 for i in range(data_size)]
         self.local_return = torch.hstack(self.get_G()).view(-1,1)
-        self.local_observation = (torch.vstack(self.obs)-self.obs_mean)/self.obs_var**.5
+        self.local_observation = torch.vstack(self.obs)
         self.local_action = torch.vstack(self.action)
         self.local_logprob = torch.vstack(self.logprob)
-        self.local_reward = (torch.hstack(self.reward).view(-1,1)-self.rew_mean)/self.rew_var**.5
+        self.local_reward = torch.hstack(self.reward).view(-1,1)
 
     def __len__(self):
         return self.data_size*self.number_of_envs
@@ -268,7 +269,7 @@ class custom_dataset(Dataset):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
         for  i in range(self.data_size-1,-1,-1):
             if i == self.data_size-1:
-                self.local_return[i] = (self.reward[i]-self.rew_mean)/self.rew_var**.5
+                self.local_return[i] = self.reward[i]
             else:
-                self.local_return[i] = (self.reward[i]-self.rew_mean)/self.rew_var**.5 + self.isnt_end(i)*self.gamma*self.local_return[i+1]
+                self.local_return[i] = self.reward[i] + self.isnt_end(i)*self.gamma*self.local_return[i+1]
         return self.local_return
