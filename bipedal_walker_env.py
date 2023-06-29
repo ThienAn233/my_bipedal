@@ -100,7 +100,7 @@ class bipedal_walker():
 
         # GET INFO
         # Check weather the target is reached, if no, pass, else sammple new target
-        goal, temp_info = self.auto_reset(temp_obs_value[0],temp_obs_value[4],obs[5:8])
+        goal, temp_info = self.auto_reset(temp_obs_value[0],temp_obs_value[4],temp_obs_value[5:8])
         
         # GET REWARD
         temp_reward_value = self.get_reward_value(temp_obs_value,goal)
