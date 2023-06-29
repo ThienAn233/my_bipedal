@@ -55,7 +55,7 @@
   <joint name="base_to_left_leg" type="revolute">
     <axis xyz="0 1 0"/>
     <limit effort="5" lower="-0.7854" upper="0.7854" velocity="5"/>
-    <origin rpy="0 0.7854 0" xyz="0 0.125 0"/>
+    <origin rpy="0 0.7854 0" xyz="-0.1 0.125 0"/>
     <parent link="base_link"/>
     <child link="left_leg"/>
   </joint>
@@ -154,7 +154,7 @@
   <joint name="base_to_right_leg" type="revolute">
     <axis xyz="0 1 0"/>
     <limit effort="5" lower="-0.7854" upper="0.7854" velocity="5"/>
-    <origin rpy="0 0.7854 0" xyz="0 -0.125 0"/>
+    <origin rpy="0 0.7854 0" xyz="-0.1 -0.125 0"/>
     <parent link="base_link"/>
     <child link="right_leg"/>
   </joint>
