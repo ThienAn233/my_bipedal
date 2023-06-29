@@ -15,7 +15,7 @@ class PPO_bipedal_walker_train():
                 log_data = True,
                 save_model = True,
                 render_mode = False,
-                thresh = 0.5,
+                thresh = 0.65,
 
                 epsilon = 0.2,
                 explore = 1e-4,
@@ -36,6 +36,7 @@ class PPO_bipedal_walker_train():
                 device = None):
 
                     
+                    
         # Global variables
         self.PATH = PATH
         self.load_model = load_model
@@ -54,15 +55,18 @@ class PPO_bipedal_walker_train():
         self.reward_index = reward_index
         self.seed = seed
         self.mlp = mlp
-        
+
+
+                    
         # local variables
         # Seed & devices
         self.action_space = action_space
         self.observation_space = observation_space
         self.device = device
-
-                    
-        ### load model and select device
+        
+        
+        
+        # Load model and device
         if load_model:
             self.model_path = PATH + '//models//PPO//' + load_model
             self.optim_path = PATH + '//models//PPO//' + load_model + 'optim'
@@ -74,22 +78,17 @@ class PPO_bipedal_walker_train():
         else:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print('Using device: ', self.device)
-
-
-                    
-        ### Tensor board
+        # Tensor board
         if self.log_data:
             self.writer = SummaryWriter(PATH + '//runs//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
-        
-                    
-        
-        ### Envs setup
+            # Envs setup
         self.env = bpd.SyncVectorEnv(bpd.bipedal_walker,num_of_env=self.number_of_envs,render_mode=self.render_mode)
         print(f'action space of {number_of_envs} envs is: {action_space}')
         print(f'observation sapce of {number_of_envs} envs is: {observation_space}')
-
-
-        ### MLP setup
+        
+        
+        
+        # Setup MLP
         if self.mlp:
             self.mlp.to(self.device)
             pass
@@ -111,19 +110,23 @@ class PPO_bipedal_walker_train():
                 def forward(self,input):
                     return self.actor(input),self.critic(input)
             self.mlp = MLP().to(self.device)
-
-                    
-                    
+            
+            
+            
         ### Normalize the return and obs
         self.mlp.eval()
         with torch.no_grad():
                 data = self.get_data_from_env()
         data = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
-        self.data_normalize(data)
+        self.obs_var_mean = torch.var_mean(data.local_observation,dim=0)
+        with torch.no_grad():
+                data = self.get_data_from_env(normalizer=self.obs_var_mean)
+        data = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
+        self.qua_var_mean = torch.var_mean(data.local_return,dim=0)
 
-                    
-                    
-        ### optim setup
+
+
+        # optim setup
         self.mlp_optimizer = torch.optim.Adam(self.mlp.parameters(),lr = self.learning_rate)
         if load_model:
             self.mlp.load_state_dict(torch.load(self.model_path,map_location=self.device))
@@ -136,13 +139,6 @@ class PPO_bipedal_walker_train():
 
     
     #helper functions
-    def data_normalize(self,data):
-        obs = data.local_observation
-        qua = data.local_return
-        self.obs_var_mean = torch.var_mean(obs,dim=0)
-        self.qua_var_mean = torch.var_mean(qua,dim = 0)
-        print('observation and return are normalized')
-        return
     
     def get_actor_critic_action_and_values(self,obs,eval=True):
         logits, values = self.mlp(obs)
@@ -154,7 +150,7 @@ class PPO_bipedal_walker_train():
             action = eval
             return action, probs.log_prob(action), probs.entropy(), values
 
-    def get_data_from_env(self):
+    def get_data_from_env(self,normalizer = (torch.tensor(1),torch.tensor(1))):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
         local_observation = []
         local_action = []
@@ -163,6 +159,8 @@ class PPO_bipedal_walker_train():
         local_timestep = []
         
         observation = self.env.get_obs()[0]
+        observation = (observation-normalizer[1].numpy())/normalizer[0].numpy()**0.5
+        
         local_observation.append(torch.Tensor(observation))
         timestep = np.ones((self.number_of_envs))
         local_timestep.append(torch.Tensor(timestep.copy()))
@@ -175,7 +173,7 @@ class PPO_bipedal_walker_train():
             local_logprob.append(torch.Tensor(logprob))
             self.env.step(action)
             observation, reward, info= self.env.get_obs()
-            # print(np.sum(reward*reward_index,axis=-1))
+            observation = (observation-normalizer[1].numpy())/normalizer[0].numpy()**0.5
             reward = np.sum(reward*self.reward_index,axis=-1)
             terminated,truncated = False, info[0]
 
@@ -193,7 +191,7 @@ class PPO_bipedal_walker_train():
             mlp = self.mlp.eval()
             # Sample data from the environment
             with torch.no_grad():
-                data = self.get_data_from_env()
+                data = self.get_data_from_env(self.obs_var_mean)
             dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
             dataloader = DataLoader(dataset,batch_size=self.batch_size,shuffle=True)
             for iteration, data in enumerate(dataloader):
@@ -201,9 +199,8 @@ class PPO_bipedal_walker_train():
                 
                 obs, action, logprob, quality, reward = data
                 obs, action, logprob, quality, reward = obs.to(self.device), action.to(self.device), logprob.to(self.device), quality.to(self.device), reward.to(self.device)
-
-                # Normalize obs and return
-                obs = (obs-self.obs_var_mean[1])/self.obs_var_mean[0]**.5
+                
+                # Normalize return
                 quality = (quality-self.qua_var_mean[1])/self.qua_var_mean[0]**.5
                 
                 next_action, next_logprob, entropy, value = self.get_actor_critic_action_and_values(obs,eval=action)
@@ -239,6 +236,8 @@ class PPO_bipedal_walker_train():
                 print(f'[{epoch}]:[{self.epochs}]|| iter [{epoch*(len(dataloader))+iteration}]: rew: {round(reward.mean().item(),2)} ret: {round(quality.mean().item(),2)} cri: {critic_loss.detach().mean().item()} act: {actor_loss.detach().mean().item()} entr: {entropy_loss.detach().item()}')
         torch.save(mlp.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
         torch.save(self.mlp_optimizer.state_dict(), self.PATH+'models//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime())+'optim')
+
+
 
 
 class custom_dataset(Dataset):
