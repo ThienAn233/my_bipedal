@@ -31,7 +31,7 @@ class bipedal_walker():
             self.robot_file = 'my_bipedal//bipedal.urdf'
         self.target_file = 'my_bipedal//target.urdf'
         self.target_radius = [0,2]
-        self.target_height = [0.3,0.5]
+        self.target_height = [0.,0.5]
         self.target = None
         self.thresh = 0.1
         self.initialPos = None
