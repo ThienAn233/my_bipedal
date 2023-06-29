@@ -194,7 +194,7 @@ class PPO_bipedal_walker_train():
             # Sample data from the environment
             with torch.no_grad():
                 data = self.get_data_from_env()
-            dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
+            dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma,(self.obs_var_mean,self.reward_var_mean))
             dataloader = DataLoader(dataset,batch_size=self.batch_size,shuffle=True)
             for iteration, data in enumerate(dataloader):
                 mlp = mlp.train()
