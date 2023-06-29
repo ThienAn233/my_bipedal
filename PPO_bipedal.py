@@ -15,7 +15,7 @@ class PPO_bipedal_walker_train():
                 log_data = True,
                 save_model = True,
                 render_mode = False,
-                thresh = 0.3,
+                thresh = 0.5,
 
                 epsilon = 0.2,
                 explore = 1e-4,
