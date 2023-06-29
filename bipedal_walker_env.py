@@ -189,7 +189,7 @@ class bipedal_walker():
     def truncation_check(self,height,vec):
         vec = np.array(vec)
         cosin = np.dot(vec,self.vertical)/(norm(vec))
-        return (self.time_steps_in_current_episode >= self.max_length) | (self.target_height[0] > height) | (cosin < 0.93)
+        return (self.time_steps_in_current_episode >= self.max_length) | (self.target_height[0] > height) | (cosin < 0.85)
     
     def auto_reset(self,distance,height,vec):
         termination = self.terminate_check(distance)
