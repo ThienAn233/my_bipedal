@@ -200,7 +200,6 @@ class PPO_bipedal_walker_train():
                 mlp = mlp.train()
                 
                 obs, action, logprob, quality, reward = data
-                quality = (quality - self.mean)/self.var**0.5
                 obs, action, logprob, quality, reward = obs.to(self.device), action.to(self.device), logprob.to(self.device), quality.to(self.device), reward.to(self.device)
                 next_action, next_logprob, entropy, value = self.get_actor_critic_action_and_values(obs,eval=action)
                 # print(reward-quality)
