@@ -1,6 +1,7 @@
 import pybullet as p 
 import pybullet_data
 import numpy as np
+from numpy.linalg import norm
 import time as t 
 
 
@@ -49,6 +50,7 @@ class bipedal_walker():
         self.pi = np.pi
         self.total_episode = 0
         self.time_steps_in_current_episode = 0
+        self.vertical = np.array([0,0,1])
         
         # Settup the environment and print out some variables
         # print('-----------------------------------')
@@ -184,11 +186,14 @@ class bipedal_walker():
     def terminate_check(self, distance):
         return (distance <= self.thresh) 
     
-    def truncation_check(self,height):
-        return (self.time_steps_in_current_episode >= self.max_length) | (self.target_height[0] > height)
-    def auto_reset(self,distance,height):
+    def truncation_check(self,height,vec):
+        vec = np.array(vec)
+        cosin = np.dot(vec,self.vertical)/(norm(vec))
+        return (self.time_steps_in_current_episode >= self.max_length) | (self.target_height[0] > height) | (cosin < 0.93)
+    
+    def auto_reset(self,distance,height,vec):
         termination = self.terminate_check(distance)
-        truncation = self.truncation_check(height)
+        truncation = self.truncation_check(height,vec)
         goal = 0
         if termination:
             goal = 1
@@ -210,7 +215,9 @@ class bipedal_walker():
         high = np.exp(-2*(obs[4]-0.4)**2)
         
         # Reward for good base orientation
-        ori = np.exp(-(obs[7]-1)**2)
+        vec = np.array(obs[5:8])
+        cosin = np.dot(vec,self.vertical)/(norm(vec))
+        ori = np.exp(-(cosin-1)**2)
         
         # # Survival reward: embeded in reward for being high
         # sur = 1
