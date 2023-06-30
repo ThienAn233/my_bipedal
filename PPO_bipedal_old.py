@@ -123,7 +123,7 @@ class PPO_bipedal_walker_train():
     #helper functions
     def get_actor_critic_action_and_values(self,obs,eval=True):
         logits, values = self.mlp(obs)
-        probs = Normal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.1*nn.Sigmoid()(logits[:,self.action_space:]))
+        probs = Normal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
             return action, probs.log_prob(action)
