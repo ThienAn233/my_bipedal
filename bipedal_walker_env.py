@@ -31,7 +31,7 @@ class bipedal_walker():
             self.robot_file = 'my_bipedal//bipedal.urdf'
         self.target_file = 'my_bipedal//target.urdf'
         self.target_radius = [0,2]
-        self.target_height = [0.,0.5]
+        self.target_height = [0.2,0.5]
         self.target = None
         self.thresh = 0.1
         self.initialPos = None
@@ -131,7 +131,8 @@ class bipedal_walker():
             self.target = np.array([np.sin(random_angle)*random_radius, np.cos(random_angle)*random_radius, random_heights])
 
     def target_maintainer(self):
-        p.resetBasePositionAndOrientation(self.targetId, self.target, [0,0,0,1], physicsClientId = self.physicsClient)
+        # p.resetBasePositionAndOrientation(self.targetId, self.target, [0,0,0,1], physicsClientId = self.physicsClient)
+        return
         
     def get_distance_and_ori_and_velocity_from_target(self):
         temp_obs_value = []
