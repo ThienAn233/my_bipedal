@@ -143,7 +143,7 @@ class PPO_bipedal_walker_train():
     
     def get_actor_critic_action_and_values(self,obs,eval=True):
         logits, values = self.mlp(obs)
-        probs = TanhNormal(loc = logits[:,:self.action_space], scale = 1*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale = 0.5*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
         # probs = TanhNormal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
