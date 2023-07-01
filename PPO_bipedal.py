@@ -150,7 +150,7 @@ class PPO_bipedal_walker_train():
             return action, probs.log_prob(action)
         else:
             action = eval
-            return action, probs.log_prob(action), -probs.log_prob(action), values
+            return action, probs.log_prob(action), -probs.log_prob(action).mean(dim=0), values
 
     def get_data_from_env(self,normalizer = (torch.tensor(1),torch.tensor(1))):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
