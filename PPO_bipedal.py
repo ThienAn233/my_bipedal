@@ -5,6 +5,7 @@ import time as t
 import my_bipedal.bipedal_walker_env as bpd
 from torch.distributions.normal import Normal
 from torch.utils.data import Dataset, DataLoader
+from torchrl.modules import TanhNormal
 from torch.utils.tensorboard import SummaryWriter
 
 class PPO_bipedal_walker_train():
@@ -142,13 +143,14 @@ class PPO_bipedal_walker_train():
     
     def get_actor_critic_action_and_values(self,obs,eval=True):
         logits, values = self.mlp(obs)
-        probs = Normal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale = 1*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
+        # probs = TanhNormal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
             return action, probs.log_prob(action)
         else:
             action = eval
-            return action, probs.log_prob(action), probs.entropy(), values
+            return action, probs.log_prob(action), -probs.log_prob(action), values
 
     def get_data_from_env(self,normalizer = (torch.tensor(1),torch.tensor(1))):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
@@ -251,8 +253,13 @@ class custom_dataset(Dataset):
         self.local_return = torch.hstack(self.get_G()).view(-1,1)
         self.local_observation = torch.vstack(self.obs)
         self.local_action = torch.vstack(self.action)
-        self.local_logprob = torch.vstack(self.logprob)
+        self.local_logprob = torch.vstack(self.logprob).view(-1,1)
         self.local_reward = torch.hstack(self.reward).view(-1,1)
+        # print(self.local_observation.shape)
+        # print(self.local_action.shape)
+        # print(self.local_logprob.shape)
+        # print(self.local_return.shape)
+        # print(self.local_reward.shape)
 
     def __len__(self):
         return self.data_size*self.number_of_envs
@@ -271,4 +278,4 @@ class custom_dataset(Dataset):
                 self.local_return[i] = self.reward[i]
             else:
                 self.local_return[i] = self.reward[i] + self.isnt_end(i)*self.gamma*self.local_return[i+1]
-        return self.local_return
+        return self.local_return   
