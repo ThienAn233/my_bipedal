@@ -94,6 +94,7 @@ class bipedal_walker():
         
         for _ in range(self.num_step):
             p.stepSimulation( physicsClientId = self.physicsClient)
+            # t.sleep(1./240.)
         
         # GET OBSERVATION
         temp_obs_value = self.get_all_obs()
@@ -123,7 +124,7 @@ class bipedal_walker():
         # random_radius = np.random.uniform(*self.target_radius)
         # random_heights = np.random.uniform(*self.target_height)
         # random_angle = np.random.uniform(0,2*self.pi)
-        random_Ori = p.getQuaternionFromEuler([0,0,0], physicsClientId = self.physicsClient)
+        random_Ori = [0,0,1,0]
         # if origin:      # if origin: sample and reset the origin position
         self.initialPos = np.array([0, 0, self.initialHeight])
         p.resetBasePositionAndOrientation(self.robotId, self.initialPos, random_Ori, physicsClientId = self.physicsClient)
@@ -194,6 +195,9 @@ class bipedal_walker():
     def truncation_check(self,height,vec):
         vec = np.array(vec)
         cosin = np.dot(vec,self.vertical)/(norm(vec))
+        # print(self.time_steps_in_current_episode >= self.max_length)
+        # print(self.target_height[0] > height)
+        # print(cosin < 0.93)
         return (self.time_steps_in_current_episode >= self.max_length) | (self.target_height[0] > height) | (cosin < 0.93)
     
     def auto_reset(self,height,vec):
