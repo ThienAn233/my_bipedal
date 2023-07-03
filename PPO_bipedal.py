@@ -210,8 +210,8 @@ class PPO_bipedal_walker_train():
             with torch.no_grad():
                 data = self.get_data_from_env()
             dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
-            sns.kdeplot(data=dataset.local_observation.squeeze())
-            plt.show()
+            # sns.kdeplot(data=dataset.local_observation.squeeze())
+            # plt.show()
             dataloader = DataLoader(dataset,batch_size=self.batch_size,shuffle=True)
             for iteration, data in enumerate(dataloader):
                 mlp = mlp.train()
