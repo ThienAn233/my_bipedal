@@ -4,7 +4,6 @@ import numpy as np
 import time as t
 import my_bipedal.bipedal_walker_env as bpd_old
 import my_bipedal.bipedal_walker_env_v0 as bpd
-# from torch.distributions.normal import Normal
 from torch.utils.data import Dataset, DataLoader
 from torchrl.modules import TanhNormal
 from torch.utils.tensorboard import SummaryWriter
@@ -121,7 +120,7 @@ class PPO_bipedal_walker_train():
         ### Normalize the return and obs
         self.mlp.eval()
         with torch.no_grad():
-                data = self.get_data_from_env()
+                data = self.get_data_from_env(dont_act=True)
         data = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
         self.obs_var_mean = torch.var_mean(data.local_observation,dim=0)
         self.qua_var_mean = torch.var_mean(data.local_return,dim=0)
@@ -158,7 +157,7 @@ class PPO_bipedal_walker_train():
             # print(probs.log_prob(action).shape)
             return action, probs.log_prob(action), -probs.log_prob(action).mean(dim=0), values
 
-    def get_data_from_env(self,normalizer = (torch.tensor(1),torch.tensor(1))):
+    def get_data_from_env(self,normalizer = (torch.tensor(1),torch.tensor(1)),dont_act = False):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
         local_observation = []
         local_action = []
@@ -182,6 +181,8 @@ class PPO_bipedal_walker_train():
             action, logprob = action.cpu(), logprob.cpu()
             local_action.append(torch.Tensor(action))
             local_logprob.append(torch.Tensor(logprob))
+            if dont_act:
+                action = np.zeros_like(action)
             self.env.step(action)
             observation, reward, info= self.env.get_obs()
             
