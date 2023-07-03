@@ -148,7 +148,7 @@ class PPO_bipedal_walker_train():
         logits, values = self.mlp(obs)
         logits = logits.view(*logits.shape,1)
         # print(logits.shape)
-        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.1*torch.abs(logits[:,self.action_space:])+0.001*torch.ones_like(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
         # probs = TanhNormal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
