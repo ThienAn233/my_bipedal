@@ -217,7 +217,7 @@ class bipedal_walker():
     def get_reward_value(self,obs):
         
         # Reward for high speed in x direction
-        speed = obs[7]
+        speed = -obs[7]
         
         # Reward for being in good y direction
         align = -obs[1]**2
