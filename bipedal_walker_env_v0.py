@@ -121,9 +121,9 @@ class bipedal_walker():
     
     def sample_target(self):
         # random_radius = np.random.uniform(*self.target_radius)
-        random_heights = np.random.uniform(*self.target_height)
+        # random_heights = np.random.uniform(*self.target_height)
         # random_angle = np.random.uniform(0,2*self.pi)
-        random_Ori = p.getQuaternionFromEuler([0,0,np.random.uniform(0,2*self.pi)], physicsClientId = self.physicsClient)
+        random_Ori = p.getQuaternionFromEuler([0,0,0], physicsClientId = self.physicsClient)
         # if origin:      # if origin: sample and reset the origin position
         self.initialPos = np.array([0, 0, self.initialHeight])
         p.resetBasePositionAndOrientation(self.robotId, self.initialPos, random_Ori, physicsClientId = self.physicsClient)
