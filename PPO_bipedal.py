@@ -116,14 +116,17 @@ class PPO_bipedal_walker_train():
             self.mlp = MLP().to(self.device)
             
             
-            
         ### Normalize the return and obs
         self.mlp.eval()
         with torch.no_grad():
-                data = self.get_data_from_env(dont_act=True)
+                data = self.get_data_from_env()
         data = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
         self.obs_var_mean = torch.var_mean(data.local_observation,dim=0)
         self.qua_var_mean = torch.var_mean(data.local_return,dim=0)
+        # sns.kdeplot(data=data.local_observation.squeeze())
+        # plt.show()
+        # print(f'observation var mean: {self.obs_var_mean}')
+        # print(f'quality var mean: {self.qua_var_mean}')
 
 
 
@@ -145,7 +148,7 @@ class PPO_bipedal_walker_train():
         logits, values = self.mlp(obs)
         logits = logits.view(*logits.shape,1)
         # print(logits.shape)
-        probs = TanhNormal(loc = logits[:,:self.action_space], scale=1*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.1*torch.abs(logits[:,self.action_space:])+0.001*torch.ones_like(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
         # probs = TanhNormal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
@@ -157,7 +160,7 @@ class PPO_bipedal_walker_train():
             # print(probs.log_prob(action).shape)
             return action, probs.log_prob(action), -probs.log_prob(action).mean(dim=0), values
 
-    def get_data_from_env(self,normalizer = (torch.tensor(1),torch.tensor(1)),dont_act = False):
+    def get_data_from_env(self,normalizer = (torch.tensor(1),torch.tensor(1))):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
         local_observation = []
         local_action = []
@@ -181,8 +184,6 @@ class PPO_bipedal_walker_train():
             action, logprob = action.cpu(), logprob.cpu()
             local_action.append(torch.Tensor(action))
             local_logprob.append(torch.Tensor(logprob))
-            if dont_act:
-                action = np.zeros_like(action)
             self.env.step(action)
             observation, reward, info= self.env.get_obs()
             
@@ -207,8 +208,10 @@ class PPO_bipedal_walker_train():
             mlp = self.mlp.eval()
             # Sample data from the environment
             with torch.no_grad():
-                data = self.get_data_from_env(self.obs_var_mean)
+                data = self.get_data_from_env()
             dataset = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
+            sns.kdeplot(data=dataset.local_observation.squeeze())
+            plt.show()
             dataloader = DataLoader(dataset,batch_size=self.batch_size,shuffle=True)
             for iteration, data in enumerate(dataloader):
                 mlp = mlp.train()
