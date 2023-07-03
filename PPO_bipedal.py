@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 import time as t
-import my_bipedal.bipedal_walker_env as bpd
+import my_bipedal.bipedal_walker_env as bpd_old
+import my_bipedal.bipedal_walker_env_v0 as bpd
 # from torch.distributions.normal import Normal
 from torch.utils.data import Dataset, DataLoader
 from torchrl.modules import TanhNormal
@@ -13,6 +14,7 @@ class PPO_bipedal_walker_train():
                 # Global variables
                 PATH = None,
                 load_model = None,
+                envi = bpd,
                 log_data = True,
                 save_model = True,
                 render_mode = False,
@@ -26,14 +28,14 @@ class PPO_bipedal_walker_train():
                 epochs = 500,
                 data_size = 4000,
                 batch_size = 2000,
-                reward_index = np.array([[0., 0.8, 0.2]]),
+                reward_index = np.array([[0.25, 0.25, 0.25, 0.25]]),
                 seed = 3009,
                 mlp = None,
 
                 # local variables
                 # Seed & devices
                 action_space = 6,
-                observation_space = 51,
+                observation_space = 25,
                 device = None):
 
                     
@@ -41,6 +43,7 @@ class PPO_bipedal_walker_train():
         # Global variables
         self.PATH = PATH
         self.load_model = load_model
+        self.envi = envi
         self.log_data = log_data
         self.save_model = save_model
         self.render_mode = render_mode
@@ -62,7 +65,7 @@ class PPO_bipedal_walker_train():
         # local variables
         # Seed & devices
         self.action_space = action_space
-        self.observation_space = observation_space
+        self.observation_space = observation_space + action_space
         self.device = device
         
         
@@ -83,7 +86,8 @@ class PPO_bipedal_walker_train():
         if self.log_data:
             self.writer = SummaryWriter(PATH + '//runs//PPO//'+t.strftime('%Y-%m-%d-%H-%M-%S', t.localtime()))
             # Envs setup
-        self.env = bpd.SyncVectorEnv(bpd.bipedal_walker,num_of_env=self.number_of_envs,render_mode=self.render_mode)
+        
+        self.env = self.envi.SyncVectorEnv(envi.bipedal_walker,num_of_env=self.number_of_envs,render_mode=self.render_mode)
         print(f'action space of {number_of_envs} envs is: {action_space}')
         print(f'observation sapce of {number_of_envs} envs is: {observation_space}')
         
@@ -99,12 +103,12 @@ class PPO_bipedal_walker_train():
                     super(MLP,self).__init__()
                 # nn setup
                     self.actor = nn.Sequential(
-                        nn.Linear(observation_space,500),
+                        nn.Linear(observation_space+action_space,500),
                         nn.Tanh(),
                         nn.Linear(500,action_space*2),
                     )
                     self.critic = nn.Sequential(
-                        nn.Linear(observation_space,500),
+                        nn.Linear(observation_space+action_space,500),
                         nn.Tanh(),
                         nn.Linear(500,1)
                     )
@@ -120,9 +124,6 @@ class PPO_bipedal_walker_train():
                 data = self.get_data_from_env()
         data = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
         self.obs_var_mean = torch.var_mean(data.local_observation,dim=0)
-        with torch.no_grad():
-                data = self.get_data_from_env(normalizer=self.obs_var_mean)
-        data = custom_dataset(data,self.data_size,self.number_of_envs,self.gamma)
         self.qua_var_mean = torch.var_mean(data.local_return,dim=0)
 
 
@@ -166,6 +167,9 @@ class PPO_bipedal_walker_train():
         local_timestep = []
         
         observation = self.env.get_obs()[0]
+        previous_action = np.zeros((self.number_of_envs,self.action_space))
+        observation = np.hstack([observation,previous_action])
+        # print(observation.shape)
         observation = (observation-normalizer[1].numpy())/normalizer[0].numpy()**0.5
         
         local_observation.append(torch.Tensor(observation))
@@ -180,6 +184,10 @@ class PPO_bipedal_walker_train():
             local_logprob.append(torch.Tensor(logprob))
             self.env.step(action)
             observation, reward, info= self.env.get_obs()
+            
+            # stacking obs and previous action
+            previous_action = action.squeeze()
+            observation = np.hstack([observation,previous_action])
             observation = (observation-normalizer[1].numpy())/normalizer[0].numpy()**0.5
             reward = np.sum(reward*self.reward_index,axis=-1)
             terminated,truncated = False, info[0]
