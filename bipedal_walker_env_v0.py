@@ -231,7 +231,7 @@ class bipedal_walker():
         # # Survival reward: embeded in reward for being high
         # sur = 1
         
-        return [speed, high, high, surv ]
+        return [speed, align, high, surv ]
         
 class SyncVectorEnv():
     def __init__(self,env,num_of_env = 5,render_mode = None):
