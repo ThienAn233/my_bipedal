@@ -21,7 +21,7 @@ class PPO_bipedal_walker_train():
 
                 epsilon = 0.2,
                 explore = 1e-4,
-                gamma = 0.99,
+                gamma = 1,
                 learning_rate = 4e-4,
                 number_of_envs = 10,
                 epochs = 500,
