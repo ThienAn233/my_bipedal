@@ -172,6 +172,7 @@ class PPO_bipedal_walker_train():
         timestep = np.ones((self.number_of_robot))
         local_timestep.append(torch.Tensor(timestep.copy()))
         for i in range(self.data_size) :
+            print(i)
             # act and get observation 
             action, logprob = self.get_actor_critic_action_and_values(torch.Tensor(observation).to(self.device))
             action, logprob = action.cpu(), logprob.cpu()
