@@ -220,7 +220,7 @@ class bipedal_walker():
         speed = -obs[7]
         
         # Reward for being in good y direction
-        align = -obs[1]**2
+        align = np.exp(-obs[1]**2)
         
         # Reward for being high
         high = 0
