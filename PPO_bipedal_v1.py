@@ -120,7 +120,8 @@ class PPO_bipedal_walker_train():
         with torch.no_grad():
                 data = self.get_data_from_env()
         data = custom_dataset(data,self.data_size,self.number_of_robot,self.gamma)
-        self.qua_var_mean = list(torch.var_mean(data.local_return,dim=0))
+        self.qua_var_mean = torch.var_mean(data.local_return,dim=0)
+        print(f'quality var mean: {self.qua_var_mean}')
                     
 
         # optim setup
