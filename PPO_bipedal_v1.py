@@ -85,6 +85,7 @@ class PPO_bipedal_walker_train():
             # Envs setup
         
         self.env = envi.bipedal_walker(num_robot=self.number_of_robot,render_mode=self.render_mode)
+        print('env is ready!')
         print(f'action space of {number_of_robot} robot is: {action_space}')
         print(f'observation sapce of {number_of_robot} robot is: {observation_space}')
         
@@ -112,7 +113,7 @@ class PPO_bipedal_walker_train():
                 def forward(self,input):
                     return self.actor(input),self.critic(input)
             self.mlp = MLP().to(self.device)
-            
+        print('MLP is ready!')
             
         ### Normalize the return and obs
         self.mlp.eval()
