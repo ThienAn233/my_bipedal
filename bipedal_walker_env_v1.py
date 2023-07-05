@@ -61,7 +61,7 @@ class bipedal_walker():
         self.get_init_pos()
         for pos in self.corr_list:
             self.robotId_list.append(p.loadURDF(self.robot_file, physicsClientId = self.physicsClient,basePosition=pos,baseOrientation=[0,0,1,0]))
-            print(f'robot with Id: {self.robotId_list[-1} is loaded')
+            print(f'robot with Id: {self.robotId_list[-1]} is loaded')
         # self.targetId = p.loadURDF(self.target_file, physicsClientId = self.physicsClient)
         self.planeId = p.loadURDF('plane.urdf', physicsClientId = self.physicsClient)
         self.number_of_joints = p.getNumJoints(self.robotId_list[0], physicsClientId = self.physicsClient)
