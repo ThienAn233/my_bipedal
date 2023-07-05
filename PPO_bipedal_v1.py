@@ -120,7 +120,7 @@ class PPO_bipedal_walker_train():
         with torch.no_grad():
                 data = self.get_data_from_env()
         data = custom_dataset(data,self.data_size,self.number_of_robot,self.gamma)
-        self.qua_var, self.qua_mean = torch.var_mean(data.local_return,dim=0)
+        self.qua_var_mean = torch.var_mean(data.local_return,dim=0)
                     
 
         # optim setup
@@ -211,7 +211,7 @@ class PPO_bipedal_walker_train():
                 
                 obs, action, logprob, quality, reward = data
                 # Normalize return
-                quality = (quality-self.qua_var)/self.qua_mean**.5
+                quality = (quality-self.qua_var_mean[1])/self.qua_var_mean[0]**.5
                 obs, action, logprob, quality, reward = obs.to(self.device), action.to(self.device), logprob.to(self.device), quality.to(self.device), reward.to(self.device)
                 
                 next_action, next_logprob, entropy, value = self.get_actor_critic_action_and_values(obs,eval=action)
