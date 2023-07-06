@@ -129,7 +129,7 @@ class bipedal_walker():
         random_Ori = [0,0,1,0]
         pos = self.corr_list[robotId]
         p.resetBasePositionAndOrientation(robotId, pos, random_Ori, physicsClientId = self.physicsClient)
-        p.resetBaseVelocity(robotId,[-1,0,0],[0,0,0],physicsClientId=self.physicsClient)
+        p.resetBaseVelocity(robotId,[-.3,0,0],[0,0,0],physicsClientId=self.physicsClient)
         for jointId in self.jointId_list:
             p.resetJointState(bodyUniqueId=robotId,jointIndex=jointId,targetValue=0,targetVelocity=0,physicsClientId=self.physicsClient)
         
@@ -208,7 +208,8 @@ class bipedal_walker():
         speed = -obs[7]
 
         # Reward for being in good y direction
-        align = np.exp(-obs[1]**2)
+        align = 0
+        # np.exp(-obs[1]**2)
         
         # Reward for surviving 
         surv = 1 
