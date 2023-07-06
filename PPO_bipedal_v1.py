@@ -122,8 +122,8 @@ class PPO_bipedal_walker_train():
         data = custom_dataset(data,self.data_size,self.number_of_robot,self.gamma)
         self.qua_var_mean = torch.var_mean(data.local_return,dim=0)
         print(f'quality var mean: {self.qua_var_mean}')
-                    
 
+                    
         # optim setup
         self.mlp_optimizer = torch.optim.Adam(self.mlp.parameters(),lr = self.learning_rate)
         if load_model:
@@ -142,7 +142,7 @@ class PPO_bipedal_walker_train():
         logits, values = self.mlp(obs)
         logits = logits.view(*logits.shape,1)
         # print(logits.shape)
-        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.1*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
         # probs = TanhNormal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
@@ -170,7 +170,6 @@ class PPO_bipedal_walker_train():
         timestep = np.ones((self.number_of_robot))
         local_timestep.append(torch.Tensor(timestep.copy()))
         for i in range(self.data_size) :
-            # print(i)
             # act and get observation 
             action, logprob = self.get_actor_critic_action_and_values(torch.Tensor(observation).to(self.device))
             action, logprob = action.cpu(), logprob.cpu()
