@@ -31,7 +31,7 @@ class bipedal_walker():
         else:
             self.robot_file = 'my_bipedal//bipedal.urdf'
         self.num_robot = num_robot
-        self.target_height = [0.35,0.5]
+        self.target_height = [0.2,0.5]
         self.target = None
         self.initialPos = None
         self.initialHeight = 0.3752
@@ -191,7 +191,7 @@ class bipedal_walker():
     def truncation_check(self,height,vec,robotId):
         vec = np.array(vec)
         cosin = np.dot(vec,self.vertical)/(norm(vec))
-        return (self.time_steps_in_current_episode[robotId] >= self.max_length) | (self.target_height[0] > height) | (cosin < 0.93)
+        return (self.time_steps_in_current_episode[robotId] >= self.max_length) | (self.target_height[0] > height) | (cosin < 0.97)
     
     def auto_reset(self,robotId,obs):
         trunc_list = []
@@ -224,10 +224,4 @@ class bipedal_walker():
 # for _ in range(1200):
 #     env.sim()
 #     obs,rew,inf = env.get_obs()
-# env.close()
-# env = SyncVectorEnv(bipedal_walker)
-# for _ in range(1500):
-#     # env.step()
-#     obs = env.get_obs()
-#     print(obs)
 # env.close()
