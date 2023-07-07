@@ -20,12 +20,12 @@ class PPO_bipedal_walker_train():
                 epsilon = 0.2,
                 explore = 1e-4,
                 gamma = 1,
-                learning_rate = 4e-4,
+                learning_rate = 1e-4,
                 number_of_robot = 9,
                 epochs = 500,
-                data_size = 1000,
+                data_size = 2000,
                 batch_size = 2000,
-                reward_index = np.array([[10, 0.25, 0.25]]),
+                reward_index = np.array([[0.5, 0.25, 0.5]]),
                 seed = 3009,
                 mlp = None,
 
@@ -101,12 +101,12 @@ class PPO_bipedal_walker_train():
                     super(MLP,self).__init__()
                 # nn setup
                     self.actor = nn.Sequential(
-                        nn.Linear(observation_space+action_space,500),
+                        nn.Linear(observation_space,500),
                         nn.Tanh(),
                         nn.Linear(500,action_space*2),
                     )
                     self.critic = nn.Sequential(
-                        nn.Linear(observation_space+action_space,500),
+                        nn.Linear(observation_space,500),
                         nn.Tanh(),
                         nn.Linear(500,1)
                     )
@@ -121,9 +121,13 @@ class PPO_bipedal_walker_train():
                 data = self.get_data_from_env()
         data = custom_dataset(data,self.data_size,self.number_of_robot,self.gamma)
         self.qua_var_mean = torch.var_mean(data.local_return,dim=0)
+        self.val_var_mean = torch.var_mean(data.local_values,dim=0)
         print(f'quality var mean: {self.qua_var_mean}')
+        print(f'values var mean: {self.val_var_mean}')
 
-                    
+
+
+
         # optim setup
         self.mlp_optimizer = torch.optim.Adam(self.mlp.parameters(),lr = self.learning_rate)
         if load_model:
@@ -142,37 +146,38 @@ class PPO_bipedal_walker_train():
         logits, values = self.mlp(obs)
         logits = logits.view(*logits.shape,1)
         # print(logits.shape)
-        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/4,min=-np.pi/4)
         # probs = TanhNormal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
             # print(probs.log_prob(action).shape)
-            return action, -probs.log_prob(action)
+            return action, -probs.log_prob(action), values
         else:
             action = eval
             # print(action.shape)
             # print(probs.log_prob(action).shape)
             return action, probs.log_prob(action), -probs.log_prob(action).mean(dim=0), values
 
-    def get_data_from_env(self,normalizer = (torch.tensor(1),torch.tensor(1))):
+    def get_data_from_env(self):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
         local_observation = []
         local_action = []
         local_logprob = []
         local_reward = []
         local_timestep = []
+        local_values = []
         
         observation = self.env.get_obs()[0]
-        previous_action = np.zeros((self.number_of_robot,self.action_space))
-        observation = np.hstack([observation,previous_action])
-        observation = (observation-normalizer[1].numpy())/normalizer[0].numpy()**0.5
-        local_observation.append(torch.Tensor(observation))
+        # previous_action = np.zeros((self.number_of_robot,self.action_space))
+        # observation = np.hstack([observation,previous_action])
+
         timestep = np.ones((self.number_of_robot))
         local_timestep.append(torch.Tensor(timestep.copy()))
         for i in range(self.data_size) :
             # act and get observation 
-            action, logprob = self.get_actor_critic_action_and_values(torch.Tensor(observation).to(self.device))
+            action, logprob, values = self.get_actor_critic_action_and_values(torch.Tensor(observation).to(self.device))
             action, logprob = action.cpu(), logprob.cpu()
+            local_observation.append(torch.Tensor(observation))
             local_action.append(torch.Tensor(action))
             local_logprob.append(torch.Tensor(logprob))
             self.env.act(action)
@@ -180,20 +185,20 @@ class PPO_bipedal_walker_train():
             observation, reward, info= self.env.get_obs()
             
             # stacking obs and previous action
-            previous_action = action.squeeze()
-            observation = np.hstack([observation,previous_action])
-            observation = (observation-normalizer[1].numpy())/normalizer[0].numpy()**0.5
+            # previous_action = action.squeeze()
+            # observation = np.hstack([observation,previous_action])
 
             reward = np.sum(reward*self.reward_index,axis=-1)
-            terminated,truncated = False, info[0]
+            truncated = info[0]
 
             # save var
             local_reward.append(torch.Tensor(reward))
             local_observation.append(torch.Tensor(observation))
             local_timestep.append(torch.Tensor(timestep.copy()))
+            local_values.append(torch.Tensor(values))
             
-            timestep = (1 + timestep)*(1-(terminated | truncated))
-        return local_observation, local_action, local_logprob, local_reward, local_timestep
+            timestep = (1 + timestep)*(1-truncated)
+        return local_observation, local_action, local_logprob, local_reward, local_timestep, local_values
 
     def train(self):
         best_reward = 0
@@ -215,7 +220,8 @@ class PPO_bipedal_walker_train():
                 obs, action, logprob, quality, reward = obs.to(self.device), action.to(self.device), logprob.to(self.device), quality.to(self.device), reward.to(self.device)
                 
                 next_action, next_logprob, entropy, value = self.get_actor_critic_action_and_values(obs,eval=action)
-                # print(reward-quality)
+                # Normalize values
+                value = (value-self.val_var_mean[1])/self.val_var_mean[0]**.5
                 # Train models
                 self.mlp_optimizer.zero_grad()
                 prob_ratio = torch.exp(next_logprob-logprob)
@@ -257,13 +263,14 @@ class custom_dataset(Dataset):
         self.data_size = data_size
         self.number_of_robot = number_of_robot
         self.gamma = gamma
-        self.obs, self.action, self.logprob, self.reward, self.timestep = data        
+        self.obs, self.action, self.logprob, self.reward, self.timestep, self.values = data        
         self.local_return = [0 for i in range(data_size)]
         self.local_return = torch.hstack(self.get_G()).view(-1,1)
         self.local_observation = torch.vstack(self.obs)
         self.local_action = torch.vstack(self.action)
         self.local_logprob = torch.vstack(self.logprob).view(-1,1)
         self.local_reward = torch.hstack(self.reward).view(-1,1)
+        self.local_values = torch.hstack(self.values).view(-1,1)
         # print(self.local_observation.shape)
         # print(self.local_action.shape)
         # print(self.local_logprob.shape)
