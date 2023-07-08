@@ -54,7 +54,7 @@
 
   <joint name="base_to_left_leg" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="3" lower="-0.785" upper="0.785" velocity="10"/>
+    <limit effort="3" lower="-0.785" upper="0.785" velocity=".5"/>
     <origin rpy="0 0.7854 0" xyz="-0.2 0.125 0"/>
     <parent link="base_link"/>
     <child link="left_leg"/>
@@ -87,7 +87,7 @@
 
   <joint name="left_bicep_joint" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="3" lower="-0.785" upper="0.785" velocity="10"/>
+    <limit effort="3" lower="-0.785" upper="0.785" velocity=".5"/>
     <origin rpy="0 -1.5708 0" xyz="0 0.075 -0.15"/>
     <parent link="left_leg"/>
     <child link="left_bicep"/>
@@ -120,7 +120,7 @@
 
   <joint name="left_feet_joint" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="3" lower="-0.785" upper="0.785" velocity="10"/>
+    <limit effort="3" lower="-0.785" upper="0.785" velocity=".5"/>
     <origin rpy="0 0.7854 0" xyz="-0.05 0.0375 -0.225"/>
     <parent link="left_bicep"/>
     <child link="left_feet"/>
@@ -153,7 +153,7 @@
 
   <joint name="base_to_right_leg" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="3" lower="-0.785" upper="0.785" velocity="10"/>
+    <limit effort="3" lower="-0.785" upper="0.785" velocity=".5"/>
     <origin rpy="0 0.7854 0" xyz="-0.2 -0.125 0"/>
     <parent link="base_link"/>
     <child link="right_leg"/>
@@ -185,7 +185,7 @@
 
   <joint name="right_bicep_joint" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="3" lower="-0.785" upper="0.785" velocity="10"/>
+    <limit effort="3" lower="-0.785" upper="0.785" velocity=".5"/>
     <origin rpy="0 -1.5708 0" xyz="0 -0.075 -0.15"/>
     <parent link="right_leg"/>
     <child link="right_bicep"/>
@@ -218,7 +218,7 @@
 
   <joint name="right_feet_joint" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="3" lower="-0.785" upper="0.785" velocity="10"/>
+    <limit effort="3" lower="-0.785" upper="0.785" velocity=".5"/>
     <origin rpy="0 0.7854 0" xyz="-0.05 -0.0375 -0.225"/>
     <parent link="right_bicep"/>
     <child link="right_feet"/>
