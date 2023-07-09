@@ -191,7 +191,7 @@ class bipedal_walker():
     def truncation_check(self,height,vec,robotId):
         vec = np.array(vec)
         cosin = np.dot(vec,self.vertical)/(norm(vec))
-        return (self.time_steps_in_current_episode[robotId] >= self.max_length) | (self.target_height[0] > height) | (cosin < 0.97)
+        return  (self.target_height[0] > height) | (cosin < 0.97)
     
     def auto_reset(self,robotId,obs):
         trunc_list = []
@@ -212,7 +212,13 @@ class bipedal_walker():
         # np.exp(-obs[1]**2)
         
         # Reward for surviving 
-        surv = 1 
+        height, vec = obs[2], obs[3:6]
+        vec = np.array(vec)
+        cosin = np.dot(vec,self.vertical)/(norm(vec))
+        if (self.target_height[0] > height) | (cosin < 0.97):
+            surv = -1
+        else: 
+            surv = 0 
         
         # # Survival reward: embeded in reward for being high
         # sur = 1
