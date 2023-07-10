@@ -31,7 +31,7 @@ class bipedal_walker():
         else:
             self.robot_file = 'my_bipedal//bipedal.urdf'
         self.num_robot = num_robot
-        self.target_height = [0.2,0.5]
+        self.target_height = [0.3,0.5]
         self.target = None
         self.initialPos = None
         self.initialHeight = 0.3752
@@ -84,9 +84,9 @@ class bipedal_walker():
             pass
         else:
             print('num_robot must be a prime')
-        nrow = int(np.sqrt(self.num_robot))
+        nrow = int(self.num_robot)
         x = np.linspace(-(nrow+1)/2,(nrow+1)/2,nrow)
-        xv,yv = np.meshgrid(x,x)
+        xv,yv = np.meshgrid(0,x)
         xv, yv = np.hstack(xv), np.hstack(yv)
         zv = self.initialHeight*np.ones_like(xv)
         self.corr_list = np.vstack((xv,yv,zv)).transpose()
@@ -112,7 +112,7 @@ class bipedal_walker():
             temp_info += [self.auto_reset(robotId,temp_obs_value[-1])]
             
             # GET REWARD
-            temp_reward_value += [self.get_reward_value(temp_obs_value[-1])]
+            temp_reward_value += [self.get_reward_value(temp_obs_value[-1],robotId)]
         
 
         return np.array(temp_obs_value), np.array(temp_reward_value), np.array(temp_info)
@@ -129,7 +129,9 @@ class bipedal_walker():
         random_Ori = [0,0,1,0]
         pos = self.corr_list[robotId]
         p.resetBasePositionAndOrientation(robotId, pos, random_Ori, physicsClientId = self.physicsClient)
-        p.resetBaseVelocity(robotId,[-.3,0,0],[0,0,0],physicsClientId=self.physicsClient)
+        init_vel = [0,0,0]
+        # np.random.uniform(-.3,.3,(3))
+        p.resetBaseVelocity(robotId,init_vel,[0,0,0],physicsClientId=self.physicsClient)
         for jointId in self.jointId_list:
             p.resetJointState(bodyUniqueId=robotId,jointIndex=jointId,targetValue=0,targetVelocity=0,physicsClientId=self.physicsClient)
         
@@ -139,7 +141,7 @@ class bipedal_walker():
         
         # Get cordinate in robot reference 
         base_position, base_orientation =  p.getBasePositionAndOrientation(robotId, physicsClientId = self.physicsClient)
-        base_position = [-base_position[i]+self.corr_list[robotId][i] for i in range(2)] + [base_position[-1]]
+        base_position = [-base_position[i]+self.corr_list[robotId][i] for i in range(1,2)] + [base_position[-1]]
         temp_obs_value += [ *base_position]
         
         # Get  base orientation in quaternion
@@ -188,46 +190,45 @@ class bipedal_walker():
                         ]
         return temp_obs_value
     
-    def truncation_check(self,height,vec,robotId):
+    def truncation_check(self,height,vec,dir):
         vec = np.array(vec)
         cosin = np.dot(vec,self.vertical)/(norm(vec))
-        return  (self.target_height[0] > height) | (cosin < 0.97)
+        return  (self.target_height[0] > height) | (cosin < 0.95) | (np.abs(dir)>0.5)
     
     def auto_reset(self,robotId,obs):
         trunc_list = []
-        height, vec = obs[2], obs[3:6]
-        truncation = self.truncation_check(height,vec,robotId)
+        height, vec, dir = obs[1], obs[2:5], obs[0]
+        truncation = self.truncation_check(height,vec,dir)
         if truncation:
             self.sample_target(robotId)
             self.time_steps_in_current_episode[robotId] = 0
         trunc_list += [truncation]
         return trunc_list
     
-    def get_reward_value(self,obs):
+    def get_reward_value(self,obs,robotId):
         # Reward for high speed in x direction
-        speed = -obs[7]
+        speed = -obs[6]
 
         # Reward for being in good y direction
-        align = 0
-        # np.exp(-obs[1]**2)
+        align = -3*obs[0]**2
+        
+        # Reward for being high
+        high = -10*(obs[1]-0.5)**2
         
         # Reward for surviving 
-        height, vec = obs[2], obs[3:6]
-        vec = np.array(vec)
-        cosin = np.dot(vec,self.vertical)/(norm(vec))
-        if (self.target_height[0] > height) | (cosin < 0.97):
-            surv = -1
-        else: 
-            surv = 0 
+        surv = 10
         
-        # # Survival reward: embeded in reward for being high
-        # sur = 1
+        # Reward for minimal force
+        force = []
+        for jointId in self.jointId_list:
+            force.append(p.getJointState(robotId,jointId)[1])
+        force = (-1e-8)*((np.array(force)**2).sum())
         
-        return [speed, align, surv ]
+        return [speed, align, high, surv, force ]
         
 # TEST ###
 # env = bipedal_walker(render_mode='human')
 # for _ in range(1200):
 #     env.sim()
 #     obs,rew,inf = env.get_obs()
-# env.close()
+# # env.close()
