@@ -25,14 +25,14 @@ class PPO_bipedal_walker_train():
                 epochs = 500,
                 data_size = 2000,
                 batch_size = 2000,
-                reward_index = np.array([[0.5, 0.25, 0.5]]),
+                reward_index = np.array([[1, 1, 1, 1, 1]]),
                 seed = 3009,
                 mlp = None,
 
                 # local variables
                 # Seed & devices
                 action_space = 6,
-                observation_space = 25,
+                observation_space = 24,
                 device = None):
 
                     
@@ -146,12 +146,12 @@ class PPO_bipedal_walker_train():
         logits, values = self.mlp(obs)
         logits = logits.view(*logits.shape,1)
         # print(logits.shape)
-        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/4,min=-np.pi/4)
-        # probs = TanhNormal(loc = (torch.pi/2)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
+        # probs = TanhNormal(loc = (torch.pi/4)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
             # print(probs.log_prob(action).shape)
-            return action, -probs.log_prob(action), values
+            return action, probs.log_prob(action), values
         else:
             action = eval
             # print(action.shape)
@@ -170,7 +170,7 @@ class PPO_bipedal_walker_train():
         observation = self.env.get_obs()[0]
         # previous_action = np.zeros((self.number_of_robot,self.action_space))
         # observation = np.hstack([observation,previous_action])
-
+        
         timestep = np.ones((self.number_of_robot))
         local_timestep.append(torch.Tensor(timestep.copy()))
         for i in range(self.data_size) :
@@ -208,8 +208,6 @@ class PPO_bipedal_walker_train():
             with torch.no_grad():
                 data = self.get_data_from_env()
             dataset = custom_dataset(data,self.data_size,self.number_of_robot,self.gamma)
-            # sns.kdeplot(data=dataset.local_observation.squeeze())
-            # plt.show()
             dataloader = DataLoader(dataset,batch_size=self.batch_size,shuffle=True)
             for iteration, data in enumerate(dataloader):
                 mlp = mlp.train()
