@@ -31,10 +31,10 @@ class bipedal_walker():
         else:
             self.robot_file = 'my_bipedal//bipedal.urdf'
         self.num_robot = num_robot
-        self.target_height = [0.3,0.5]
+        self.target_height = [0.35,0.6]
         self.target = None
         self.initialPos = None
-        self.initialHeight = 0.3752
+        self.initialHeight = 0.48
         self.robotId_list = []
         self.jointId_list = []
         self.jointName_list = []
@@ -91,11 +91,12 @@ class bipedal_walker():
         zv = self.initialHeight*np.ones_like(xv)
         self.corr_list = np.vstack((xv,yv,zv)).transpose()
         
-    def sim(self):
+    def sim(self,real_time = False):
         self.time_steps_in_current_episode = [self.time_steps_in_current_episode[i]+1 for i in range(self.num_robot)]
         for _ in range(self.num_step):
             p.stepSimulation( physicsClientId = self.physicsClient)
-            # t.sleep(1./24.)
+            if real_time:
+                t.sleep(1./240.)
             
     def get_obs(self):
         
@@ -207,13 +208,13 @@ class bipedal_walker():
     
     def get_reward_value(self,obs,robotId):
         # Reward for high speed in x direction
-        speed = -obs[6]
+        speed = -10*obs[6]
 
         # Reward for being in good y direction
-        align = -3*obs[0]**2
+        align = -5*obs[0]**2
         
         # Reward for being high
-        high = -10*(obs[1]-0.5)**2
+        high = -5*(obs[1]-.48)**2
         
         # Reward for surviving 
         surv = 10
@@ -221,8 +222,8 @@ class bipedal_walker():
         # Reward for minimal force
         force = []
         for jointId in self.jointId_list:
-            force.append(p.getJointState(robotId,jointId)[1])
-        force = (-1e-8)*((np.array(force)**2).sum())
+            force.append(p.getJointState(robotId,jointId)[-1])
+        force = (-1e-4)*((np.array(force)**2).sum())
         
         return [speed, align, high, surv, force ]
         
@@ -231,4 +232,4 @@ class bipedal_walker():
 # for _ in range(1200):
 #     env.sim()
 #     obs,rew,inf = env.get_obs()
-# # env.close()
+# env.close()
