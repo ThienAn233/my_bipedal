@@ -9,8 +9,8 @@ import time as t
 class bipedal_walker():
     
     def __init__(self,
-                 max_length = 10000,
-                 num_step = 10,
+                 max_length = 100,
+                 num_step = 50,
                  render_mode = None,
                  robot_file = None,
                  num_robot = 9,
@@ -18,7 +18,7 @@ class bipedal_walker():
         
         # Configure-able variables
         self.num_step = num_step
-        self.max_length = max_length//num_step
+        self.max_length = max_length
         self.render_mode = render_mode
         self.robot_file = robot_file
         if render_mode:
@@ -31,7 +31,7 @@ class bipedal_walker():
         else:
             self.robot_file = 'my_bipedal//bipedal.urdf'
         self.num_robot = num_robot
-        self.target_height = [0.35,0.6]
+        self.target_height = [0.4,0.6]
         self.target = None
         self.initialPos = None
         self.initialHeight = 0.48
@@ -194,7 +194,7 @@ class bipedal_walker():
     def truncation_check(self,height,vec,dir):
         vec = np.array(vec)
         cosin = np.dot(vec,self.vertical)/(norm(vec))
-        return  (self.target_height[0] > height) | (cosin < 0.95) | (np.abs(dir)>0.5)
+        return  (self.target_height[0] > height) #| (cosin < 0.95) | (np.abs(dir)>0.5)
     
     def auto_reset(self,robotId,obs):
         trunc_list = []
@@ -211,19 +211,19 @@ class bipedal_walker():
         speed = -10*obs[6]
 
         # Reward for being in good y direction
-        align = -5*obs[0]**2
+        align = -obs[0]**2
         
         # Reward for being high
-        high = -5*(obs[1]-.48)**2
+        high = -(obs[1]-.5)**2
         
         # Reward for surviving 
-        surv = 10
+        surv = 5
         
         # Reward for minimal force
         force = []
         for jointId in self.jointId_list:
             force.append(p.getJointState(robotId,jointId)[-1])
-        force = (-1e-6)*((np.array(force)**2).sum())
+        force = (-1e-8)*((np.array(force)**2).sum())
         
         return [speed, align, high, surv, force ]
         
