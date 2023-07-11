@@ -223,7 +223,7 @@ class bipedal_walker():
         force = []
         for jointId in self.jointId_list:
             force.append(p.getJointState(robotId,jointId)[-1])
-        force = (-1e-4)*((np.array(force)**2).sum())
+        force = (-1e-6)*((np.array(force)**2).sum())
         
         return [speed, align, high, surv, force ]
         
