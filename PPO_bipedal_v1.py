@@ -100,10 +100,14 @@ class PPO_bipedal_walker_train():
                 def __init__(self):
                     super(MLP,self).__init__()
                 # nn setup
+                    lin1 = nn.Linear(observation_space,500)
+                    torch.nn.init.xavier_normal_(lin1.weight)
+                    lin2 = nn.Linear(500,action_space*2)
+                    torch.nn.init.xavier_normal_(lin2.weight)
                     self.actor = nn.Sequential(
-                        nn.Linear(observation_space,500),
+                        lin1,
                         nn.Tanh(),
-                        nn.Linear(500,action_space*2),
+                        lin2,
                     )
                     self.critic = nn.Sequential(
                         nn.Linear(observation_space,500),
@@ -145,18 +149,14 @@ class PPO_bipedal_walker_train():
     def get_actor_critic_action_and_values(self,obs,eval=True):
         logits, values = self.mlp(obs)
         logits = logits.view(*logits.shape,1)
-        # print(logits.shape)
-        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/2,min=-np.pi/2)
-        # probs = TanhNormal(loc = (torch.pi/4)*nn.Tanh()(logits[:,:self.action_space]),scale=0.5*nn.Sigmoid()(logits[:,self.action_space:]))
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.1*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/4,min=-np.pi/4)
         if eval is True:
             action = probs.sample()
-            # print(probs.log_prob(action).shape)
             return action, probs.log_prob(action), values
         else:
             action = eval
-            # print(action.shape)
-            # print(probs.log_prob(action).shape)
-            return action, probs.log_prob(action), -probs.log_prob(action).mean(dim=0), values
+            dummy_action = probs.sample((100,))
+            return action, probs.log_prob(action), -probs.log_prob(dummy_action).mean(dim=0), values
 
     def get_data_from_env(self):
         ### THE FIRST EPS WILL BE TIMESTEP 1, THE FINAL EP WILL BE TIMESTEP 0
@@ -216,15 +216,12 @@ class PPO_bipedal_walker_train():
                 # Normalize return
                 quality = (quality-self.qua_var_mean[1])/self.qua_var_mean[0]**.5
                 obs, action, logprob, quality, reward = obs.to(self.device), action.to(self.device), logprob.to(self.device), quality.to(self.device), reward.to(self.device)
-                
                 next_action, next_logprob, entropy, value = self.get_actor_critic_action_and_values(obs,eval=action)
                 # Normalize values
                 value = (value-self.val_var_mean[1])/self.val_var_mean[0]**.5
                 # Train models
                 self.mlp_optimizer.zero_grad()
                 prob_ratio = torch.exp(next_logprob-logprob)
-                # print('qua',quality)
-                # print('val',value)
                 advantage = quality-value
                 critic_loss = (advantage**2).mean()
                 entropy_loss = entropy.mean()
