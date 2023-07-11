@@ -19,14 +19,14 @@ class PPO_bipedal_walker_train():
 
                 epsilon = 0.2,
                 explore = 1e-4,
-                gamma = 1,
+                gamma = .99,
                 learning_rate = 1e-4,
                 number_of_robot = 9,
                 epochs = 500,
-                data_size = 2000,
+                data_size = 1000,
                 batch_size = 2000,
                 reward_index = np.array([[1, 1, 1, 1, 1]]),
-                seed = 3009,
+                seed = 1107,
                 mlp = None,
 
                 # local variables
@@ -109,10 +109,14 @@ class PPO_bipedal_walker_train():
                         nn.Tanh(),
                         lin2,
                     )
+                    lin3 = nn.Linear(observation_space,500)
+                    torch.nn.init.xavier_normal_(lin3.weight)
+                    lin4 = nn.Linear(500,1)
+                    torch.nn.init.xavier_normal_(lin4.weight)
                     self.critic = nn.Sequential(
-                        nn.Linear(observation_space,500),
+                        lin3,
                         nn.Tanh(),
-                        nn.Linear(500,1)
+                        lin4,
                     )
                 def forward(self,input):
                     return self.actor(input),self.critic(input)
@@ -149,7 +153,8 @@ class PPO_bipedal_walker_train():
     def get_actor_critic_action_and_values(self,obs,eval=True):
         logits, values = self.mlp(obs)
         logits = logits.view(*logits.shape,1)
-        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.1*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/4,min=-np.pi/4)
+        probs = TanhNormal(loc = logits[:,:self.action_space], scale=0.2*nn.Sigmoid()(logits[:,self.action_space:]),max=np.pi/4,min=-np.pi/4)
+        # probs = Normal(loc = logits[:,:self.action_space],scale=nn.Sigmoid()(logits[:,self.action_space:]))
         if eval is True:
             action = probs.sample()
             return action, probs.log_prob(action), values
